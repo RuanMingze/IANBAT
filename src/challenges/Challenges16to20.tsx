@@ -83,7 +83,20 @@ export function Level17SliderMath({ onPass, onFail }: ChallengeContext) {
   const [val, setVal] = useState(5000);
   const [result, setResult] = useState('');
   const [done, setDone] = useState(false);
+  const [time, setTime] = useState(8);
   const dragging = useRef(false);
+
+  useEffect(() => {
+    if (done) return;
+    if (time <= 0) {
+      setDone(true);
+      setResult('超时，失败');
+      setTimeout(onFail, 800);
+      return;
+    }
+    const t = setTimeout(() => setTime((x) => x - 1), 1000);
+    return () => clearTimeout(t);
+  }, [time, done]);
 
   const onUp = () => {
     if (!dragging.current || done) return;
@@ -101,7 +114,8 @@ export function Level17SliderMath({ onPass, onFail }: ChallengeContext) {
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <p className="text-sm text-zinc-400">拖动滑块使数值精确等于目标，松开后直接判定（容差仅 8）</p>
+      <p className="text-sm text-zinc-400">8 秒内拖动滑块使数值精确等于目标，松开后直接判定（容差仅 8）</p>
+      <div className="text-xs text-zinc-500">剩余 {time}s</div>
       <div className="text-3xl font-mono text-zinc-100">目标 {target}</div>
       <input
         type="range"
@@ -238,13 +252,13 @@ export function Level19PatternLock({ onPass, onFail }: ChallengeContext) {
       return;
     }
     setActive(pattern[showIdx]);
-    const t1 = setTimeout(() => setActive(-1), 450);
-    const t2 = setTimeout(() => setShowIdx((i) => i + 1), 650);
+    const t1 = setTimeout(() => setActive(-1), 500);
+    const t2 = setTimeout(() => setShowIdx((i) => i + 1), 700);
     return () => {
       clearTimeout(t1);
       clearTimeout(t2);
     };
-  }, [showIdx, phase, pattern]);
+  }, [showIdx, phase]);
 
   const click = (n: number) => {
     if (phase !== 'input') return;

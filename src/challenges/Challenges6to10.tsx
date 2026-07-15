@@ -279,13 +279,13 @@ export function Level9MathRace({ onPass, onFail }: ChallengeContext) {
 export function Level10Trail({ onPass, onFail }: ChallengeContext) {
   const [path] = useState(() => {
     const pts: { x: number; y: number }[] = [];
-    let x = 10 + Math.random() * 20;
-    let y = 10 + Math.random() * 60;
+    let x = 10 + Math.random() * 15;
+    let y = 20 + Math.random() * 50;
     for (let i = 0; i < 14; i++) {
-      x += 4 + Math.random() * 6;
-      y += (Math.random() - 0.5) * 14;
-      y = Math.max(8, Math.min(88, y));
       pts.push({ x, y });
+      x += 4 + Math.random() * 5;
+      y += (Math.random() - 0.5) * 12;
+      y = Math.max(8, Math.min(88, y));
     }
     return pts;
   });
