@@ -136,91 +136,65 @@ export function Level17SliderMath({ onPass, onFail }: ChallengeContext) {
   );
 }
 
-export function Level18Avoid({ onPass, onFail }: ChallengeContext) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+export function Level18VisualSearch({ onPass, onFail }: ChallengeContext) {
+  const [round, setRound] = useState(0);
   const [result, setResult] = useState('');
-  const [time, setTime] = useState(0);
-  const stateRef = useRef({
-    player: { x: 250, y: 150 },
-    obstacles: [] as { x: number; y: number; vx: number; vy: number }[],
-    start: 0,
-    over: false,
-  });
+  const [grid, setGrid] = useState(() => generateGrid());
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d')!;
-    let raf = 0;
-    const W = canvas.width;
-    const H = canvas.height;
-    const s = stateRef.current;
-    s.player = { x: W / 2, y: H / 2 };
-    s.obstacles = Array.from({ length: 7 }, () => ({
-      x: Math.random() * W,
-      y: Math.random() * H,
-      vx: (Math.random() - 0.5) * 5,
-      vy: (Math.random() - 0.5) * 5,
-    }));
-    s.start = performance.now();
-    s.over = false;
+  function generateGrid() {
+    const size = 6;
+    const arr: { type: 'circle' | 'square'; idx: number }[] = [];
+    const oddIdx = Math.floor(Math.random() * (size * size));
+    for (let i = 0; i < size * size; i++) {
+      arr.push({ type: i === oddIdx ? 'square' : 'circle', idx: i });
+    }
+    return { arr, oddIdx, size };
+  }
 
-    const onMove = (e: MouseEvent) => {
-      const rect = canvas.getBoundingClientRect();
-      s.player.x = ((e.clientX - rect.left) / rect.width) * W;
-      s.player.y = ((e.clientY - rect.top) / rect.height) * H;
-    };
-    canvas.addEventListener('mousemove', onMove);
-
-    const tick = () => {
-      if (s.over) return;
-      const el = (performance.now() - s.start) / 1000;
-      setTime(el);
-      ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = '#18181b';
-      ctx.fillRect(0, 0, W, H);
-      for (const o of s.obstacles) {
-        o.x += o.vx;
-        o.y += o.vy;
-        if (o.x < 0 || o.x > W) o.vx *= -1;
-        if (o.y < 0 || o.y > H) o.vy *= -1;
-        ctx.beginPath();
-        ctx.arc(o.x, o.y, 10, 0, Math.PI * 2);
-        ctx.fillStyle = '#ef4444';
-        ctx.fill();
-        const d = Math.hypot(o.x - s.player.x, o.y - s.player.y);
-        if (d < 18) {
-          s.over = true;
-          setResult('被击中，失败');
-          setTimeout(onFail, 700);
-          return;
-        }
-      }
-      ctx.beginPath();
-      ctx.arc(s.player.x, s.player.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = '#22c55e';
-      ctx.fill();
-      if (el >= 8) {
-        s.over = true;
-        setResult('存活 8 秒，通过');
+  const click = (idx: number) => {
+    if (idx === grid.oddIdx) {
+      const nr = round + 1;
+      setRound(nr);
+      if (nr >= 5) {
+        setResult('5 轮全对，通过');
         setTimeout(onPass, 400);
-        return;
+      } else {
+        setGrid(generateGrid());
       }
-      raf = requestAnimationFrame(tick);
-    };
-    raf = requestAnimationFrame(tick);
-    return () => {
-      s.over = true;
-      cancelAnimationFrame(raf);
-      canvas.removeEventListener('mousemove', onMove);
-    };
-  }, [onPass, onFail]);
+    } else {
+      setResult('选错，失败');
+      setTimeout(onFail, 700);
+    }
+  };
 
   return (
-    <div className="flex flex-col items-center gap-3">
-      <p className="text-sm text-zinc-400">移动鼠标控制绿点，躲避 7 个红球，存活 8 秒</p>
-      <canvas ref={canvasRef} width={500} height={300} className="w-full max-w-lg rounded-xl border border-zinc-700" />
-      <div className="text-xs text-zinc-500">已存活 {time.toFixed(1)}s / 8s</div>
+    <div className="flex flex-col items-center gap-4">
+      <p className="text-sm text-zinc-400">在 6x6 网格中找到唯一的方块，5 轮全对通过</p>
+      <div className="text-xs text-zinc-500">轮次 {round + 1}/5</div>
+      <div
+        className="grid gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${grid.size}, 36px)`,
+          gridTemplateRows: `repeat(${grid.size}, 36px)`,
+        }}
+      >
+        {grid.arr.map((item) => (
+          <button
+            key={item.idx}
+            onClick={() => click(item.idx)}
+            className={`aspect-square rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center hover:bg-zinc-700 transition`}
+          >
+            <div
+              className={item.type === 'circle' ? 'rounded-full' : 'rounded-sm'}
+              style={{
+                width: '16px',
+                height: '16px',
+                background: '#52525b',
+              }}
+            />
+          </button>
+        ))}
+      </div>
       <div className="text-sm font-medium text-zinc-300 h-5">{result}</div>
     </div>
   );

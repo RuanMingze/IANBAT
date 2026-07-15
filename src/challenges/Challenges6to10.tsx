@@ -279,21 +279,26 @@ export function Level9MathRace({ onPass, onFail }: ChallengeContext) {
 export function Level10Trail({ onPass, onFail }: ChallengeContext) {
   const [path] = useState(() => {
     const pts: { x: number; y: number }[] = [];
-    let x = 10 + Math.random() * 15;
+    let x = 10 + Math.random() * 10;
     let y = 20 + Math.random() * 50;
     for (let i = 0; i < 14; i++) {
       pts.push({ x, y });
-      x += 4 + Math.random() * 5;
-      y += (Math.random() - 0.5) * 12;
-      y = Math.max(8, Math.min(88, y));
+      if (i < 13) {
+        x += 5 + Math.random() * 4;
+        x = Math.min(x, 88);
+        y += (Math.random() - 0.5) * 14;
+        y = Math.max(8, Math.min(88, y));
+      }
     }
     return pts;
   });
   const [visited, setVisited] = useState<boolean[]>(() => path.map(() => false));
   const [cur, setCur] = useState(0);
   const [result, setResult] = useState('');
+  const failed = useRef(false);
 
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (failed.current) return;
     const rect = e.currentTarget.getBoundingClientRect();
     const x = ((e.clientX - rect.left) / rect.width) * 100;
     const y = ((e.clientY - rect.top) / rect.height) * 100;
@@ -314,6 +319,7 @@ export function Level10Trail({ onPass, onFail }: ChallengeContext) {
         const prev = path[cur - 1];
         const dp = Math.hypot(x - prev.x, y - prev.y);
         if (dp > 8) {
+          failed.current = true;
           setResult('脱离轨迹，失败');
           setTimeout(onFail, 700);
         }

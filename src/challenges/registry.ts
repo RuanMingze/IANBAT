@@ -23,7 +23,7 @@ import {
 import {
   Level16Catch,
   Level17SliderMath,
-  Level18Avoid,
+  Level18VisualSearch,
   Level19PatternLock,
   Level20FinalMemory,
 } from './Challenges16to20';
@@ -46,7 +46,7 @@ export const CHALLENGES: ChallengeMeta[] = [
   { id: 15, title: '持续按压', subtitle: '时长估计', instruction: '按住使时长接近目标', Component: Level15HoldDuration },
   { id: 16, title: '接球', subtitle: '手眼协调', instruction: '接住 5 个下落球', Component: Level16Catch },
   { id: 17, title: '数值微调', subtitle: '精细调节', instruction: '8秒内滑块精确等于目标值', Component: Level17SliderMath },
-  { id: 18, title: '闪避', subtitle: '动态规避', instruction: '躲避 7 个球存活 8 秒', Component: Level18Avoid },
+  { id: 18, title: '视觉搜索', subtitle: '视觉辨识', instruction: '6x6网格中找到唯一方块，5轮全对', Component: Level18VisualSearch },
   { id: 19, title: '图案锁', subtitle: '空间记忆', instruction: '复现 6 点闪烁顺序', Component: Level19PatternLock },
   { id: 20, title: '终极记忆', subtitle: '终极挑战', instruction: '记住显示的数字并输入（仅显示2秒）', Component: Level20FinalMemory },
 ];
