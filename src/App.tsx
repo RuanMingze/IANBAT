@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ShieldCheck, Brain, Flame, ArrowRight, X, Trophy, User, RefreshCw, Code } from 'lucide-react';
+import { ShieldCheck, Brain, Flame, ArrowRight, X, Trophy, User, RefreshCw, Code, Zap, Lock } from 'lucide-react';
 import { CHALLENGES } from './challenges/registry';
 import { TOTAL_LEVELS, type ChallengeContext } from './challenges/types';
 import { VictoryScreen } from './components/VictoryScreen';
@@ -18,6 +18,7 @@ export default function App() {
   const [failCount, setFailCount] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [showSkipModal, setShowSkipModal] = useState(false);
 
   const startGame = () => {
     const name = nameInput.trim() || '匿名挑战者';
@@ -73,6 +74,26 @@ export default function App() {
     }
   };
 
+  const handleSkip = async (password: string) => {
+    setSubmitting(true);
+    try {
+      const res = await fetch(`https://iampd.ruanftrix.cn/?password=${encodeURIComponent(password)}`);
+      const data = await res.json();
+      if (data.match) {
+        const total = performance.now() - startTime;
+        setSuccessCount(TOTAL_LEVELS);
+        setFailCount(0);
+        await submitScore(nickname, TOTAL_LEVELS, true, Math.floor(total));
+        setScreen('result');
+      }
+      return data;
+    } catch {
+      return { match: false, tip: '网络错误' };
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   if (screen === 'leaderboard') {
     return <Leaderboard onBack={() => setScreen('home')} />;
   }
@@ -115,6 +136,7 @@ export default function App() {
           startTime={startTime}
           successCount={successCount}
           failCount={failCount}
+          onSkip={() => setShowSkipModal(true)}
         />
         <div className="flex-1 flex items-center justify-center px-4 py-6">
           <div className="w-full max-w-2xl bg-zinc-900/70 backdrop-blur border border-zinc-800 rounded-2xl p-6 sm:p-8 animate-slide-up">
@@ -138,6 +160,9 @@ export default function App() {
           </div>
         </div>
         <ProgressBar current={level} total={TOTAL_LEVELS} />
+        {showSkipModal && (
+          <SkipModal onClose={() => setShowSkipModal(false)} onSubmit={handleSkip} />
+        )}
       </div>
     );
   }
@@ -234,6 +259,7 @@ function Header({
   startTime,
   successCount,
   failCount,
+  onSkip,
 }: {
   level: number;
   nickname: string;
@@ -241,6 +267,7 @@ function Header({
   startTime: number;
   successCount: number;
   failCount: number;
+  onSkip: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -267,6 +294,9 @@ function Header({
         <span className="text-zinc-400 hidden sm:inline">用时 <span className="text-emerald-400 font-mono">{time}</span></span>
         <span className="text-zinc-400">成功 <span className="text-emerald-400 font-bold">{successCount}</span> / 失败 <span className="text-rose-400 font-bold">{failCount}</span></span>
         <span className="text-zinc-400">关卡 <span className="text-white font-bold">{level + 1}/{TOTAL_LEVELS}</span></span>
+        <button onClick={onSkip} className="text-zinc-500 hover:text-amber-400 transition" title="一键跳关">
+          <Zap size={18} />
+        </button>
         <button onClick={onQuit} className="text-zinc-500 hover:text-rose-400 transition">
           <X size={18} />
         </button>
@@ -389,6 +419,87 @@ function ResultScreen({
 
         <div className="text-zinc-600 text-xs mt-4">
           感谢你的参与，休息一下吧
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SkipModal({
+  onClose,
+  onSubmit,
+}: {
+  onClose: () => void;
+  onSubmit: (password: string) => Promise<{ match: boolean; tip: string }>;
+}) {
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!password.trim()) {
+      setError('请输入密码');
+      return;
+    }
+    setLoading(true);
+    setError('');
+    const result = await onSubmit(password);
+    setLoading(false);
+    if (!result.match) {
+      setError(result.tip);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+      <div className="bg-zinc-900 border border-zinc-700 rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="w-10 h-10 rounded-lg bg-amber-500/15 flex items-center justify-center">
+            <Zap className="text-amber-400" size={20} />
+          </div>
+          <h2 className="text-xl font-bold text-white">一键跳关</h2>
+        </div>
+        <p className="text-zinc-400 text-sm mb-6">
+          输入管理员密码可跳过所有挑战直接获得满分成绩。此功能仅对主页面开放，CDN 模式不可用。
+        </p>
+
+        <div className="space-y-4">
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-500" size={18} />
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => {
+                setPassword(e.target.value);
+                setError('');
+              }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+              placeholder="输入密码"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white outline-none placeholder:text-zinc-600 focus:border-amber-500/50 transition"
+            />
+          </div>
+
+          {error && (
+            <div className="text-sm text-rose-400 flex items-center gap-2">
+              <X size={14} /> {error}
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 py-3 rounded-xl bg-zinc-800 text-zinc-400 font-medium hover:bg-zinc-700 transition"
+            >
+              取消
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 py-3 rounded-xl bg-amber-500 text-zinc-900 font-bold hover:bg-amber-400 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? '验证中…' : '确认'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
