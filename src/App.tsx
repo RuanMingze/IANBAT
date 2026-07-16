@@ -77,7 +77,11 @@ export default function App() {
   const handleSkip = async (password: string) => {
     setSubmitting(true);
     try {
-      const res = await fetch(`https://iampd.ruanftrix.cn/?password=${encodeURIComponent(password)}`);
+      const res = await fetch('https://iampd.ruanftrix.cn/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password }),
+      });
       const data = await res.json();
       if (data.match) {
         const total = performance.now() - startTime;
