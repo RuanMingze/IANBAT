@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { ExternalLink, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { ExternalLink, RefreshCw, ShieldCheck, X } from 'lucide-react';
 
 interface VerificationResult {
   success: boolean;
@@ -8,110 +8,196 @@ interface VerificationResult {
 }
 
 export function CdnDemo() {
-  const [result, setResult] = useState<VerificationResult | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [verificationResult, setVerificationResult] = useState<VerificationResult | null>(null);
+  const [loginSuccess, setLoginSuccess] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const handleMessage = (e: MessageEvent) => {
-      if (e.data?.type === 'ianbat_verification_result') {
-        setResult(e.data);
+  const handleMessage = useCallback((e: MessageEvent) => {
+    if (e.data?.type === 'ianbat_verification_result') {
+      setVerificationResult(e.data);
+      if (e.data.success) {
+        setLoginSuccess(true);
+        setShowModal(false);
       }
-    };
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    }
   }, []);
 
-  const handleReset = () => {
-    const iframe = document.querySelector('iframe') as HTMLIFrameElement;
+  useEffect(() => {
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [handleMessage]);
+
+  const handleLogin = () => {
+    if (!username.trim() || !password.trim()) {
+      return;
+    }
+    setShowModal(true);
+    setVerificationResult(null);
+  };
+
+  const handleResetVerification = () => {
+    const iframe = document.querySelector('iframe#verification-iframe') as HTMLIFrameElement;
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage({ type: 'ianbat_reset' }, '*');
     }
-    setResult(null);
+    setVerificationResult(null);
+  };
+
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setVerificationResult(null);
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl font-black mb-2">CDN 嵌入演示</h1>
-          <p className="text-zinc-400">
-            本页面展示如何将 IANBAT 验证组件嵌入到其他网站中。由于尚未部署到生产环境，iframe 内容暂时无法显示。
-          </p>
-        </div>
+    <div className="min-h-screen bg-gradient-to-b from-zinc-950 via-zinc-900 to-zinc-950 flex items-center justify-center px-4">
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="w-96 h-96 rounded-full bg-emerald-500/5 blur-3xl" />
+      </div>
 
-        <div className="bg-zinc-900 rounded-2xl border border-zinc-800 overflow-hidden mb-8">
-          <div className="px-4 py-3 border-b border-zinc-800 flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-300">验证组件嵌入示例</span>
-            <a
-              href="/cdn/docs"
-              className="inline-flex items-center gap-1 text-xs text-zinc-500 hover:text-white transition"
+      <div className="relative z-10 w-full max-w-md">
+        {loginSuccess ? (
+          <div className="text-center">
+            <div className="w-20 h-20 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center mx-auto mb-6">
+              <ShieldCheck className="text-emerald-400" size={40} />
+            </div>
+            <h1 className="text-3xl font-black text-emerald-400 mb-2">登录成功</h1>
+            <p className="text-zinc-400 mb-8">
+              欢迎回来，{username}！<br />
+              人机验证已通过，您已成功登录系统。
+            </p>
+            <button
+              onClick={() => {
+                setLoginSuccess(false);
+                setUsername('');
+                setPassword('');
+              }}
+              className="px-6 py-3 rounded-xl bg-zinc-800 text-white font-medium hover:bg-zinc-700 transition"
             >
-              查看文档 <ExternalLink size={12} />
-            </a>
+              返回登录页面
+            </button>
           </div>
-          <div className="relative">
-            <iframe
-              src="/cdn"
-              width="100%"
-              height="550"
-              frameBorder="0"
-              sandbox="allow-scripts allow-same-origin"
-              onLoad={() => setLoading(false)}
-              className="bg-zinc-950"
-            />
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-zinc-950">
-                <div className="text-center">
-                  <div className="w-8 h-8 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
-                  <span className="text-sm text-zinc-500">加载中...</span>
-                </div>
+        ) : (
+          <>
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-zinc-900/80 border border-zinc-800 mb-4">
+                <ShieldCheck className="text-emerald-400" size={32} />
               </div>
-            )}
-          </div>
-        </div>
+              <h1 className="text-2xl font-bold text-white mb-2">安全登录</h1>
+              <p className="text-zinc-500 text-sm">
+                登录前需完成超难人机验证，防止自动化攻击
+              </p>
+            </div>
 
-        {result && (
-          <div className={`rounded-2xl border p-6 mb-8 ${
-            result.success ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-rose-500/10 border-rose-500/30'
-          }`}>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className={`text-lg font-bold ${result.success ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {result.success ? '验证通过' : '验证失败'}
-                </h3>
-                <p className="text-zinc-400 text-sm mt-1">
-                  成功 {result.successCount} 关，失败 {result.failCount} 关
-                </p>
+            <div className="bg-zinc-900/70 backdrop-blur border border-zinc-800 rounded-2xl p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1.5">用户名</label>
+                  <input
+                    type="text"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="请输入用户名"
+                    className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white outline-none placeholder:text-zinc-600 focus:border-emerald-500/50 transition"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs text-zinc-500 mb-1.5">密码</label>
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="请输入密码"
+                    className="w-full px-4 py-3 rounded-xl bg-zinc-800 border border-zinc-700 text-white outline-none placeholder:text-zinc-600 focus:border-emerald-500/50 transition"
+                  />
+                </div>
+                <button
+                  onClick={handleLogin}
+                  disabled={!username.trim() || !password.trim()}
+                  className={`w-full py-3 rounded-xl font-bold text-lg transition flex items-center justify-center gap-2 ${
+                    username.trim() && password.trim()
+                      ? 'bg-emerald-500 text-zinc-900 hover:bg-emerald-400 active:scale-[0.98]'
+                      : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+                  }`}
+                >
+                  <ShieldCheck size={20} />
+                  登录（需验证）
+                </button>
+              </div>
+
+              <div className="mt-6 text-center text-xs text-zinc-600">
+                <p>本演示展示如何将 IANBAT 人机验证集成到登录流程中</p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-zinc-500">
+              <a href="/cdn/docs" className="hover:text-white transition">
+                查看集成文档
+              </a>
+              <span className="w-px h-4 bg-zinc-800" />
+              <a href="/" className="hover:text-white transition">
+                返回主页
+              </a>
+            </div>
+          </>
+        )}
+      </div>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 px-4">
+          <div className="bg-zinc-900 border border-zinc-700 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="px-6 py-4 border-b border-zinc-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
+                  <ShieldCheck className="text-emerald-400" size={18} />
+                </div>
+                <h2 className="text-lg font-bold text-white">人机验证</h2>
               </div>
               <button
-                onClick={handleReset}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-800 text-white text-sm font-medium hover:bg-zinc-700 transition"
+                onClick={handleCloseModal}
+                className="text-zinc-500 hover:text-white transition"
               >
-                <RefreshCw size={16} /> 重新验证
+                <X size={20} />
               </button>
             </div>
+            <div className="p-4">
+              <div className="relative">
+                <iframe
+                  id="verification-iframe"
+                  src="/cdn"
+                  width="100%"
+                  height="480"
+                  frameBorder="0"
+                  sandbox="allow-scripts allow-same-origin"
+                  onLoad={() => setLoading(false)}
+                  className="bg-zinc-950 rounded-xl"
+                />
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-zinc-950 rounded-xl">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-zinc-700 border-t-emerald-500 rounded-full animate-spin mx-auto mb-2" />
+                      <span className="text-sm text-zinc-500">加载中...</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {verificationResult && !verificationResult.success && (
+                <div className="mt-4 flex items-center justify-between">
+                  <span className="text-sm text-rose-400">验证失败，请重试</span>
+                  <button
+                    onClick={handleResetVerification}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-zinc-800 text-white text-xs font-medium hover:bg-zinc-700 transition"
+                  >
+                    <RefreshCw size={14} /> 重新验证
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
-        )}
-
-        <div className="bg-zinc-900/50 rounded-xl border border-zinc-800/50 p-4">
-          <h3 className="font-bold text-zinc-300 mb-2">关于演示</h3>
-          <ul className="text-zinc-400 text-sm space-y-1">
-            <li>• 本页面使用相对路径 `/cdn` 作为 iframe 源，模拟本地开发环境</li>
-            <li>• 在生产环境中，请使用完整 URL：`https://ianbat.ruanftrix.cn/cdn`</li>
-            <li>• 验证结果会通过 postMessage 传递给父页面</li>
-            <li>• 通过监听 `ianbat_verification_result` 消息类型获取验证结果</li>
-          </ul>
         </div>
-
-        <div className="mt-8 flex items-center gap-4 text-sm text-zinc-500">
-          <a href="/cdn/docs" className="hover:text-white transition">
-            返回文档
-          </a>
-          <a href="/" className="hover:text-white transition">
-            返回主页
-          </a>
-        </div>
-      </div>
+      )}
     </div>
   );
 }
