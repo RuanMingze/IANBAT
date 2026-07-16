@@ -21,7 +21,8 @@ export default function App() {
   const [showSkipModal, setShowSkipModal] = useState(false);
 
   const startGame = () => {
-    const name = nameInput.trim() || '匿名挑战者';
+    const name = nameInput.trim();
+    if (!name) return;
     setNickname(name);
     setLevel(0);
     setStartTime(performance.now());
@@ -216,9 +217,14 @@ function HomeScreen({
           </div>
           <button
             onClick={onStart}
-            className="w-full py-3 rounded-xl bg-emerald-500 text-zinc-900 font-bold text-lg hover:bg-emerald-400 transition flex items-center justify-center gap-2 active:scale-[0.98]"
+            disabled={!nameInput.trim()}
+            className={`w-full py-3 rounded-xl font-bold text-lg transition flex items-center justify-center gap-2 active:scale-[0.98] ${
+              nameInput.trim()
+                ? 'bg-emerald-500 text-zinc-900 hover:bg-emerald-400'
+                : 'bg-zinc-700 text-zinc-500 cursor-not-allowed'
+            }`}
           >
-            开始验证 <ArrowRight size={20} />
+            {nameInput.trim() ? <>开始验证 <ArrowRight size={20} /></> : '请输入昵称'}
           </button>
         </div>
 
